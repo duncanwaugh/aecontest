@@ -2,8 +2,6 @@ import os
 import streamlit as st
 from pptx import Presentation
 from docx import Document
-from docx.shared import Pt, Inches
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -27,7 +25,7 @@ def extract_text_from_pptx(file_path):
 def summarize_and_extract(text):
     prompt = f"""
     From the following incident investigation presentation text, create a concise Serious Event Lessons Learned document containing ONLY:
-
+    
     - Brief, clear title/headline
     - Event Summary (brief, readable paragraph)
     - Clearly listed contributing factors
@@ -37,7 +35,7 @@ def summarize_and_extract(text):
 
     Here is the presentation text:
     {text}
-
+    
     Format:
     Title:
     Event Summary:
@@ -53,20 +51,14 @@ def summarize_and_extract(text):
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
-        max_tokens=1000,
+        max_tokens=700,
     )
 
     return response.choices[0].message.content.strip()
 
-# Generate styled Word Document from the summarized content
+# Generate Word Document from the summarized content (no template needed)
 def create_lessons_learned_doc(content, output_path):
     doc = Document()
-
-    # Style settings
-    style = doc.styles['Normal']
-    font = style.font
-    font.name = 'Calibri'
-    font.size = Pt(11)
 
     # Parse content into sections
     sections = {}
@@ -79,15 +71,9 @@ def create_lessons_learned_doc(content, output_path):
         elif current_section:
             sections[current_section].append(line)
 
-    # Title section (centered)
+    # Title
     title = sections.get("Title", ["Lessons Learned"])[0]
-    title_para = doc.add_paragraph()
-    run = title_para.add_run(title)
-    run.bold = True
-    run.font.size = Pt(16)
-    title_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-
-    doc.add_paragraph("\n")
+    doc.add_heading(title, level=1)
 
     # Event Summary
     doc.add_heading("Event Summary", level=2)
@@ -103,11 +89,6 @@ def create_lessons_learned_doc(content, output_path):
     doc.add_heading("Lessons Learned", level=2)
     for lesson in sections.get("Lessons Learned", []):
         doc.add_paragraph(lesson, style='List Bullet')
-
-    # Footer note
-    doc.add_paragraph("\nContact for Further Information")
-    doc.add_paragraph("Name: Rob Covassin")
-    doc.add_paragraph("Email Address: rcovassin@aecon.com")
 
     doc.save(output_path)
 
