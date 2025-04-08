@@ -1,15 +1,17 @@
 import os
-import openai
+import streamlit as st
 from pptx import Presentation
 from docx import Document
 from dotenv import load_dotenv
-import streamlit as st
+from openai import OpenAI
 
-# Load API Key
+# Load environment variables
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Extract Text from PPTX
+# Set up OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Extract text from PPTX slides
 def extract_text_from_pptx(file_path):
     prs = Presentation(file_path)
     text = ''
@@ -19,7 +21,7 @@ def extract_text_from_pptx(file_path):
                 text += shape.text_frame.text + "\n"
     return text
 
-# GPT summarization and content extraction
+# Generate summary and extracted sections using OpenAI GPT
 def summarize_and_extract(text):
     prompt = f"""
     From the following incident investigation presentation text, create a concise Serious Event Lessons Learned document containing ONLY:
@@ -44,16 +46,17 @@ def summarize_and_extract(text):
     - lesson 1
     - lesson 2
     """
-    
-    response = openai.ChatCompletion.create(
+
+    response = client.chat.completions.create(
         model="gpt-4-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=700,
     )
+
     return response.choices[0].message.content.strip()
 
-# Generate Word Document from extracted text
+# Generate Word Document from the summarized content
 def create_lessons_learned_doc(content, template_path, output_path):
     doc = Document(template_path)
 
@@ -67,7 +70,7 @@ def create_lessons_learned_doc(content, template_path, output_path):
         elif current_section:
             sections[current_section].append(line)
 
-    # Populate the template placeholders
+    # Replace placeholders with extracted content
     for para in doc.paragraphs:
         text = para.text
         if '{{Title}}' in text:
@@ -82,7 +85,7 @@ def create_lessons_learned_doc(content, template_path, output_path):
     doc.save(output_path)
 
 # Streamlit UI
-st.title('AI Serious Event Lessons Learned Generator')
+st.title('🦺 Serious Event Lessons Learned Generator')
 
 uploaded_file = st.file_uploader("Upload Executive Review PPTX", type=['pptx'])
 
@@ -90,22 +93,25 @@ if uploaded_file:
     input_filepath = f'input/{uploaded_file.name}'
     with open(input_filepath, 'wb') as f:
         f.write(uploaded_file.getbuffer())
-    
-    st.write("Processing presentation...")
-    pptx_text = extract_text_from_pptx(input_filepath)
 
-    st.write("Extracting summary and lessons learned...")
-    generated_content = summarize_and_extract(pptx_text)
-    st.text_area("Generated Content", generated_content, height=300)
+    with st.spinner("Extracting content from presentation..."):
+        pptx_text = extract_text_from_pptx(input_filepath)
 
-    # Generate final document
+    with st.spinner("Generating Lessons Learned summary..."):
+        generated_content = summarize_and_extract(pptx_text)
+
+    st.success("✅ Generation Complete!")
+
+    st.text_area("📝 Generated Content:", generated_content, height=300)
+
     template_path = 'templates/lessons_learned_template.docx'
     output_path = 'generated_lessons_learned.docx'
+
     create_lessons_learned_doc(generated_content, template_path, output_path)
-    
+
     with open(output_path, "rb") as file:
-        btn = st.download_button(
-            label="Download Generated Document",
+        st.download_button(
+            label="📥 Download Generated Document",
             data=file,
             file_name=output_path,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
