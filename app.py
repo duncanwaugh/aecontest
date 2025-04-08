@@ -48,10 +48,10 @@ def summarize_and_extract(text):
     """
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
-        max_tokens=700,
+        max_tokens=500,
     )
 
     return response.choices[0].message.content.strip()
