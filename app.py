@@ -53,7 +53,7 @@ def summarize_and_extract(text):
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
-        max_tokens=700,
+        max_tokens=1000,
     )
 
     return response.choices[0].message.content.strip()
