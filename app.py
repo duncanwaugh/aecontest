@@ -104,7 +104,7 @@ if uploaded_file:
 
     st.text_area("📝 Generated Content:", generated_content, height=300)
 
-    template_path = 'templates/lessons_learned_template.docx'
+    template_path = r'C:\aecontest\templates\lessons_learned_template.docx'
     output_path = 'generated_lessons_learned.docx'
 
     create_lessons_learned_doc(generated_content, template_path, output_path)
